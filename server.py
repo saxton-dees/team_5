@@ -1,63 +1,96 @@
 from socket import *
 import threading
 
-# List to keep track of connected clients
+class Client:
+    def __init__(self, socket):
+        self.socket = socket
+        self.channel = None 
+
+class Channel:
+    def __init__(self, name):
+        self.name = name
+        self.clients = []
+
+
+channels = []  
 clients = []
 
-def handle_client(client_socket):
-    """
-    Handles communication with a single client.
 
-    Args:
-        client_socket (socket): The connected client socket.
-    """
-    # Add the new client to the list
-    clients.append(client_socket)
-    
+def broadcast(client_socket, message, channel):
+    """Broadcasts a message to all clients in a channel except the sender."""
+    for client in channel.clients:
+        if client.socket != client_socket:
+                client.socket.send(message.encode())
+
+
+def handle_client(client_socket):
+    """Handles communication with a single client."""
+    client = Client(client_socket)
+    clients.append(client)
+
     while True:
         try:
-            # Receive message from the client
             message = client_socket.recv(2048).decode()
-            
-            # If no message is received, the client has likely disconnected
             if not message:
                 break
 
-            # Print the received message (for demonstration)
-            print(f"Received: {message}") 
+            if message.startswith("/join"):
+                channel_name = message.split("/join")[1].strip()
+                channel = next((c for c in channels if c.name == channel_name), None)
+                if not channel:
+                    channel = Channel(channel_name)
+                    channels.append(channel)
+                    client_socket.send(f'Channel {channel_name} has been created.\n'.encode())
+                channel.clients.append(client)
+                client.channel = channel
 
-            # Send the message to all connected clients
-            for client in clients:
-                if client != client_socket:  # Don't send back to the sender
-                    try:
-                        response = f"CLIENT: {message}"
-                        client.send(response.encode())
-                    except:
-                        # Remove client if there's an error sending
-                        clients.remove(client) 
+                join_message = f"You have joined channel: {channel.name}"
+                client_socket.send(join_message.encode())
+                broadcast(client_socket, f"SERVER: {client_socket.getpeername()} has joined the channel.", channel)
+
+            elif message.startswith("/leave"):
+                if client.channel:
+                    channel_name = client.channel.name
+                    leave_message = f"You are leaving channel: {channel_name}"
+                    client_socket.send(leave_message.encode())
+                    broadcast(client_socket, f"SERVER: {client_socket.getpeername()} has left the channel.", client.channel)
+                    client.channel.clients.remove(client)
+                    client.channel = None
+
+            else:
+                if client.channel:
+                    response = f"CLIENT {client_socket.getpeername()}: {message}"
+                    broadcast(client_socket, response, client.channel)
+                else:
+                    client_socket.send("You are not in a channel. Use /join <channel_name> to join one.".encode())
 
         except Exception as e:
             print(f"Error handling client: {e}")
             break
 
-    # Remove the client from the list when done
-    clients.remove(client_socket)
+    remove_client(client_socket)
+
+
+def remove_client(client_socket):
+    """Removes a client from the clients list and any channel they were in."""
+    for client in clients:
+        if client.socket == client_socket:
+            if client.channel:
+                client.channel.clients.remove(client)
+            clients.remove(client)
+            break
     client_socket.close()
 
 
-# Set up the server socket
 server_port = 12000
-server_socket = socket(AF_INET, SOCK_STREAM) # Create a TCP socket
-server_socket.bind(('', server_port)) # Bind to all available interfaces on the specified port
-server_socket.listen(5) # Allow up to 5 pending connections
+server_socket = socket(AF_INET, SOCK_STREAM)
+server_socket.bind(('', server_port))
+server_socket.listen(5)
 
 print(f"Server is ready to receive")
 
 while True:
-    # Accept a new client connection
     client_socket, addr = server_socket.accept()
     print(f"Accepted connection from {addr}")
-
-    # Create a new thread to handle the client
     client_handler = threading.Thread(target=handle_client, args=(client_socket,))
     client_handler.start()
