@@ -1,6 +1,9 @@
 from socket import *
 import threading
 
+# List to keep track of connected clients
+clients = []
+
 def handle_client(client_socket):
     """
     Handles communication with a single client.
@@ -8,6 +11,9 @@ def handle_client(client_socket):
     Args:
         client_socket (socket): The connected client socket.
     """
+    # Add the new client to the list
+    clients.append(client_socket)
+    
     while True:
         try:
             # Receive message from the client
@@ -20,15 +26,22 @@ def handle_client(client_socket):
             # Print the received message (for demonstration)
             print(f"Received: {message}") 
 
-            # Send a response back to the client
-            response = f"SERVER: {message}"  # Simple echo for now
-            client_socket.send(response.encode())
+            # Send the message to all connected clients
+            for client in clients:
+                if client != client_socket:  # Don't send back to the sender
+                    try:
+                        response = f"CLIENT: {message}"
+                        client.send(response.encode())
+                    except:
+                        # Remove client if there's an error sending
+                        clients.remove(client) 
 
         except Exception as e:
             print(f"Error handling client: {e}")
             break
 
-    # Close the client socket when done
+    # Remove the client from the list when done
+    clients.remove(client_socket)
     client_socket.close()
 
 
@@ -44,7 +57,6 @@ while True:
     # Accept a new client connection
     client_socket, addr = server_socket.accept()
     print(f"Accepted connection from {addr}")
-
 
     # Create a new thread to handle the client
     client_handler = threading.Thread(target=handle_client, args=(client_socket,))
