@@ -27,6 +27,86 @@ def broadcast(client_socket, message, channel):
                 print(f"Error broadcasting message: {e}")
 
 
+def handle_join(client, message):
+    """Handles the /join command."""
+    channel_name = message.split("/join")[1].strip()
+    channel = next((c for c in channels if c.name == channel_name), None)
+    if not channel:
+        channel = Channel(channel_name)
+        channels.append(channel)
+        client.socket.send(f'Channel {channel_name} has been created.\n'.encode())
+    channel.clients.append(client)
+    client.channel = channel
+
+    join_message = f"You have joined channel: {channel.name}"
+    client.socket.send(join_message.encode())
+    broadcast(client.socket, f"SERVER: {client.nickname} has joined the channel.", channel)
+
+
+def handle_leave(client, message):
+    """Handles the /leave command."""
+    if client.channel:
+        channel_name = client.channel.name
+        leave_message = f"You are leaving channel: {channel_name}"
+        client.socket.send(leave_message.encode())
+        broadcast(client.socket, f"SERVER: {client.nickname} has left the channel.", client.channel)
+        client.channel.clients.remove(client)
+        client.channel = None
+
+
+def handle_nick(client, message):
+    """Handles the /nick command."""
+    new_nickname = message.split("/nick")[1].strip()
+    if new_nickname:
+        old_nickname = client.nickname
+        client.nickname = new_nickname
+        if client.channel:
+            broadcast(client.socket, f"SERVER: {old_nickname} is now known as {client.nickname}.", client.channel)
+
+
+def handle_list(client, message):
+    """Handles the /list command."""
+    if channels:
+        channel_list = "Channels:\n" + "\n".join([f"{c.name} ({len(c.clients)} users)" for c in channels])
+        client.socket.send(channel_list.encode())
+    else:
+        client.socket.send("No channels available.".encode())
+
+
+def handle_msg(client, message):
+    """Handles the /msg command."""
+    try:
+        parts = message.split()
+        target_nickname = parts[1]
+        private_message = " ".join(parts[2:])
+        target_client = next((c for c in clients if c.nickname == target_nickname), None)
+        if target_client:
+            target_client.socket.send(f"PRIVATE MESSAGE from {client.nickname}: {private_message}".encode())
+            client.socket.send(f"PRIVATE MESSAGE to {target_nickname}: {private_message}".encode())
+        else:
+            client.socket.send(f"SERVER: User {target_nickname} not found.".encode())
+    except IndexError:
+        client.socket.send("Invalid /msg command format. Usage: /msg <nickname> <message>".encode())
+
+
+def handle_quit(client, message):
+    """Handles the /quit command."""
+    client.socket.send("Goodbye!".encode())
+    # This will cause the loop in handle_client to break
+
+
+def handle_help(client, message):
+    """Handles the /help command."""
+    help_msg = "/connect <server-name> [port#] - Connect to named server (port# optional)"
+    help_msg += "\n/nick <nickname> - Pick a nickname (should be unique among active users)"
+    help_msg += "\n/join <channel> - Join a channel"
+    help_msg += "\n/leave [<channel>] - Leave the current (or named) channel"
+    help_msg += "\n/list - List channels and number of users"
+    help_msg += "\n/msg <nickname> <message> - Send a private message to a user"
+    help_msg += "\n/help - Print out this help message"
+    client.socket.send(help_msg.encode())
+
+
 def handle_client(client_socket):
     """Handles communication with a single client."""
     client = Client(client_socket)
@@ -39,70 +119,27 @@ def handle_client(client_socket):
                 break
 
             if message.startswith("/join"):
-                channel_name = message.split("/join")[1].strip()
-                channel = next((c for c in channels if c.name == channel_name), None)
-                if not channel:
-                    channel = Channel(channel_name)
-                    channels.append(channel)
-                    client.socket.send(f'Channel {channel_name} has been created.\n'.encode())
-                channel.clients.append(client)
-                client.channel = channel
-
-                join_message = f"You have joined channel: {channel.name}"
-                client.socket.send(join_message.encode())
-                broadcast(client.socket, f"SERVER: {client.nickname} has joined the channel.", channel)
+                handle_join(client, message)
 
             elif message.startswith("/leave"):
-                if client.channel:
-                    channel_name = client.channel.name
-                    leave_message = f"You are leaving channel: {channel_name}"
-                    client.socket.send(leave_message.encode())
-                    broadcast(client.socket, f"SERVER: {client.nickname} has left the channel.", client.channel)
-                    client.channel.clients.remove(client)
-                    client.channel = None
+                handle_leave(client, message)
 
             elif message.startswith("/nick"):
-                new_nickname = message.split("/nick")[1].strip()
-                if new_nickname:
-                    old_nickname = client.nickname
-                    client.nickname = new_nickname
-                    if client.channel:
-                        broadcast(client.socket, f"SERVER: {old_nickname} is now known as {client.nickname}.", client.channel)
+                handle_nick(client, message)
 
             elif message.startswith("/list"):
-                if channels:
-                    channel_list = "Channels:\n" + "\n".join([f"{c.name} ({len(c.clients)} users)" for c in channels])
-                    client.socket.send(channel_list.encode())
-                else:
-                    client.socket.send("No channels available.".encode())
+                handle_list(client, message)
 
             elif message.startswith("/msg"):
-                try:
-                    parts = message.split()
-                    target_nickname = parts[1]
-                    private_message = " ".join(parts[2:])
-                    target_client = next((c for c in clients if c.nickname == target_nickname), None)
-                    if target_client:
-                        target_client.socket.send(f"PRIVATE MESSAGE from {client.nickname}: {private_message}".encode())
-                        client.socket.send(f"PRIVATE MESSAGE to {target_nickname}: {private_message}".encode())
-                    else:
-                        client.socket.send(f"SERVER: User {target_nickname} not found.".encode())
-                except IndexError:
-                    client.socket.send("Invalid /msg command format. Usage: /msg <nickname> <message>".encode())
+                handle_msg(client, message)
 
             elif message.startswith("/quit"):
-                client.socket.send("Goodbye!".encode())
-                break 
+                handle_quit(client, message)
+                break  # Break the loop after handling /quit
 
             elif message.startswith("/help"):
-                help_msg = "/connect <server-name> [port#] - Connect to named server (port# optional)"
-                help_msg += "\n/nick <nickname> - Pick a nickname (should be unique among active users)"
-                help_msg += "\n/join <channel> - Join a channel"
-                help_msg += "\n/leave [<channel>] - Leave the current (or named) channel"
-                help_msg += "\n/list - List channels and number of users"
-                help_msg += "\n/msg <nickname> <message> - Send a private message to a user"
-                help_msg += "\n/help - Print out this help message"
-                client.socket.send(help_msg.encode())
+                handle_help(client, message)
+
             else:
                 if client.channel:
                     response = f"{client.nickname}: {message}"
