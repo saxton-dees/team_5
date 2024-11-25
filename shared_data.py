@@ -25,21 +25,20 @@ channels = []
 clients = []
 
 
-help_msg = "=" * 80
-help_msg += "\n"
-help_msg += "\/" * 40
-help_msg += "\n"
-help_msg += "=" * 80
-help_msg += "\n/connect <server-name> [port#] - Connect to named server (port# optional)"
-help_msg += "\n/nick <nickname> - Pick a nickname (should be unique among active users)"
-help_msg += "\n/join <channel> - Join a channel"
-help_msg += "\n/leave [<channel>] - Leave the current (or named) channel"
-help_msg += "\n/list - List channels and number of users"
-help_msg += "\n/msg <nickname> <message> - Send a private message to a user"
-help_msg += "\n/help - Print out this help message"
-help_msg += "\n"
-help_msg += "=" * 80
-help_msg += "\n"
-help_msg += "\/" * 40
-help_msg += "\n"
-help_msg += "=" * 80
+help_msg = f"""
+{"=" * 80}
+{"/" * 80}
+{"=" * 80}
+
+/connect <server-name> [port#] - Connect to named server (port# optional)
+/nick <nickname> - Pick a nickname (should be unique among active users)
+/join <channel> - Join a channel
+/leave [<channel>] - Leave the current (or named) channel
+/list - List channels and number of users
+/msg <nickname> <message> - Send a private message to a user
+/help - Print out this help message
+
+{"=" * 80}
+{"/" * 80}
+{"=" * 80}
+"""
