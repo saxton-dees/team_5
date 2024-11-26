@@ -20,7 +20,6 @@ def handle_join(client, message, channels):
         
     if client.channel:
         handle_leave(client, message)
-        print("");
         
     channel = next((c for c in channels if c.name == channel_name), None)
         
