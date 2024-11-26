@@ -6,6 +6,7 @@ import threading
 from SharedData import *  # Import shared data (clients, channels, etc.)
 from CommandHandlers import *  # Import command handlers
 import argparse
+import socket
 
 def handle_client(client_socket):
     """Handles communication with a single client."""
@@ -77,11 +78,22 @@ if __name__=="__main__":
     # parser.print_help()
 
     #storing values
-    server_port = args.p # Define the server port
     debug_level = args.d
+    server_port = args.p # Define the server port
+    
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socket.timeout(2)
+    result = socket.connect_ex(('127.0.0.1',server_port))
+    if result == 0:
+        print("Port is open")
+    else:
+        print("Port is not open, using default 12000")
+        server_port = 12000
+    
+    
 
     # Server setup
-    server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
+    # server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
     server_socket.bind(('', server_port))  # Bind the socket to the port
     server_socket.listen(5)  # Listen for incoming connections
 
