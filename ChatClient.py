@@ -1,11 +1,14 @@
 import json
 import threading
 from socket import *
+from colorama import Fore, Style, init
+
+init(autoreset=True)  # Initialize colorama for automatic style resets
 
 # Set up the client socket
 server_port = 12000  # Define the server port
 client_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
-client_socket.connect(("", server_port))  # Connect to the server
+client_socket.connect(("localhost", server_port))  # Connect to the server
 
 
 def receive_messages():
@@ -17,25 +20,29 @@ def receive_messages():
 
             # Handle different message types
             if message["type"] == "server_message":  # Server messages
-                print(message["message"])
+                print(Fore.GREEN + message["message"] + Style.RESET_ALL)
             elif message["type"] == "chat_message":  # Chat messages
-                print(f"{message['sender']}: {message['message']}")
+                print(Fore.CYAN + f"{message['sender']}: {message['message']}" + Style.RESET_ALL)
             elif message["type"] == "private_message":  # Private messages
                 if "sender" in message:
                     print(
-                        f"PRIVATE MESSAGE from {message['sender']}: {message['message']}"
+                        Fore.YELLOW
+                        + f"PRIVATE MESSAGE from {message['sender']}: {message['message']}"
+                        + Style.RESET_ALL
                     )
                 else:
                     print(
-                        f"PRIVATE MESSAGE to {message['receiver']}: {message['message']}"
+                        Fore.YELLOW
+                        + f"PRIVATE MESSAGE to {message['receiver']}: {message['message']}"
+                        + Style.RESET_ALL
                     )
             elif message["type"] == "help":  # Help message
-                print(message["message"])
+                print(Fore.BLUE + message["message"] + Style.RESET_ALL)
             elif message["type"] == "list":  # List channels
                 if message["message"]:
-                    print(message["message"])
+                    print(Fore.MAGENTA + message["message"] + Style.RESET_ALL)
                 else:
-                    print("No channels available.")
+                    print(Fore.RED + "No channels available." + Style.RESET_ALL)
 
         except:  # Handle any exceptions during message receiving
             break
@@ -78,10 +85,11 @@ while True:
             )
         elif message.startswith("/quit"):  # Quit the chat
             send_message("quit")
+            print(Fore.RED + "Disconnecting from server..." + Style.RESET_ALL)
             break  # Exit the loop after sending the quit message
         elif message.startswith("/help"):  # Get help
             send_message("help")
         else:  # Send a normal chat message
             send_message("chat_message", message=message)
     except Exception as e:  # Handle any exceptions during message sending
-        print(f"Error sending message: {e}")
+        print(Fore.RED + f"Error sending message: {e}" + Style.RESET_ALL)

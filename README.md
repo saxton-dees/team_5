@@ -3,6 +3,7 @@
 ## Team Members
 
 *   [Saxton Dees, <id>]
+*   [Upama Thapa Magar, <114264958>]
 
 ## Demo Video
 

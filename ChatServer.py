@@ -2,9 +2,12 @@ import argparse
 import json
 import threading
 from socket import *
+from colorama import Fore, Style, init
 
 from CommandHandlers import *  # Import command handlers
 from SharedData import *  # Import shared data (clients, channels, etc.)
+
+init(autoreset=True)  # Initialize colorama for automatic style resets
 
 
 def handle_client(client_socket):
@@ -51,11 +54,13 @@ def handle_client(client_socket):
                     # Send a server message informing the client to join a channel
                     send_server_message(
                         client,
-                        "You are not in a channel. Use /join <channel_name> to join one.",
+                        Fore.RED
+                        + "You are not in a channel. Use /join <channel_name> to join one."
+                        + Style.RESET_ALL,
                     )
 
         except Exception as e:  # Handle any exceptions during client communication
-            print(f"Error handling client: {e}")
+            print(Fore.RED + f"Error handling client: {e}" + Style.RESET_ALL)
             break
 
     remove_client(client_socket)  # Remove the client when the connection is closed
@@ -95,13 +100,13 @@ if __name__ == "__main__":
     server_socket.bind(("", server_port))  # Bind the socket to the port
     server_socket.listen(5)  # Listen for incoming connections
 
-    print(f"Server is ready to receive")
+    print(Fore.GREEN + f"Server is ready to receive" + Style.RESET_ALL)
 
     while True:  # Main loop for accepting client connections
         client_socket, addr = (
             server_socket.accept()
         )  # Accept a connection from a client
-        print(f"Accepted connection from {addr}")
+        print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
         client_socket.send(
             json.dumps(help_msg).encode()
         )  # Send the help message to the client
