@@ -13,8 +13,10 @@ from SharedData import *  # Import shared data (clients, channels, etc.)
 init(autoreset=True)  # Initialize colorama for automatic style resets
 
 last_activity_time = time.time()  # Initialize with the current time
+print(Fore.GREEN + f"Activity detected. Resetting idle timer: {last_activity_time}" + Style.RESET_ALL)
 
 IDLE_TIMEOUT = 3 * 60  # 3 minutes in seconds
+
 
 def handle_client(client_socket):
     """Handles communication with a single client."""
@@ -85,12 +87,15 @@ def remove_client(client_socket):
             break
     client_socket.close()
 
+stop_event = threading.Event()  # global event to signal threads to stop
+
 def idle_timeout_checker():
     """Checks for idle timeout and shuts down the server if unused."""
     global last_activity_time
 
-    while True:
+    while not stop_event.is_set():  # Check if stop event is set
         time_since_last_activity = time.time() - last_activity_time
+        print(Fore.YELLOW + f"Checking idle timeout. Time since last activity: {time_since_last_activity}s" + Style.RESET_ALL)
         if time_since_last_activity > IDLE_TIMEOUT:
             print(Fore.RED + "Server has been idle for over 3 minutes. Shutting down..." + Style.RESET_ALL)
             shutdown_server()
@@ -98,15 +103,26 @@ def idle_timeout_checker():
         time.sleep(10)  # Check every 10 seconds
 
 
+
 def shutdown_server():
     """Shuts down the server gracefully."""
+    global server_socket
+
+    stop_event.set()
+
     for client in clients:
         try:
             client.socket.close()
         except Exception as e:
             print(Fore.RED + f"Error closing client socket: {e}" + Style.RESET_ALL)
+
+    # Close the server socket
+    try:
+        server_socket.close()
+    except Exception as e:
+        print(Fore.RED + f"Error closing server socket: {e}" + Style.RESET_ALL)
+
     print(Fore.RED + "Server shutting down..." + Style.RESET_ALL)
-    exit(0)
 
 
 def signal_handler(sig, frame):
@@ -114,6 +130,8 @@ def signal_handler(sig, frame):
     print(Fore.RED + "\nCtrl-C detected. Shutting down server gracefully..." + Style.RESET_ALL)
     shutdown_server()
 
+
+running = True  # Add a flag to control the main loop
 
 if __name__ == "__main__":
 
@@ -148,18 +166,18 @@ if __name__ == "__main__":
     idle_thread = threading.Thread(target=idle_timeout_checker, daemon=True)
     idle_thread.start()
 
-    while True:  # Main loop for accepting client connections
-        try:
-            client_socket, addr = server_socket.accept()  # Accept a connection from a client
-            print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
-            client_socket.send(
-                json.dumps(help_msg).encode()
-            )  # Send the help message to the client
-            # Create a new thread to handle the client communication
-            client_handler = threading.Thread(target=handle_client, args=(client_socket,))
-            client_handler.start()  # Start the thread
-        except KeyboardInterrupt:
-            shutdown_server()
-            break
-        except timeout:  # Timeout error to allow for signal handling
-            continue
+    try:
+        while running:  # Main loop for accepting client connections
+            try:
+                client_socket, addr = server_socket.accept()
+                print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
+                client_socket.send(json.dumps(help_msg).encode())
+                client_handler = threading.Thread(target=handle_client, args=(client_socket,))
+                client_handler.start()
+            except timeout:
+                continue
+            except OSError:  # Handle socket closure
+                break
+    except KeyboardInterrupt:
+        running = False
+        shutdown_server()

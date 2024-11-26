@@ -1,5 +1,6 @@
 import json
 import threading
+import signal  # For handling Ctrl-C
 from socket import *
 from colorama import Fore, Style, init
 
@@ -54,6 +55,17 @@ def send_message(message_type, **kwargs):
     message.update(kwargs)  # Add any additional data to the message
     client_socket.send(json.dumps(message).encode())  # Send the JSON encoded message
 
+
+def signal_handler(sig, frame):
+    """Handles the Ctrl-C (KeyboardInterrupt) signal for graceful shutdown."""
+    print(Fore.RED + "\nCtrl-C detected. Disconnecting from server gracefully..." + Style.RESET_ALL)
+    send_message("quit")  # Notify the server that the client is disconnecting
+    client_socket.close()  # Close the client socket
+    exit(0)  # Exit the program
+
+
+# Register the signal handler for Ctrl-C
+signal.signal(signal.SIGINT, signal_handler)
 
 # Create and start a thread to receive messages from the server
 receive_thread = threading.Thread(target=receive_messages)
