@@ -1,6 +1,7 @@
 import argparse
 import json
 import threading
+import time
 from socket import *
 from colorama import Fore, Style, init
 
@@ -9,9 +10,13 @@ from SharedData import *  # Import shared data (clients, channels, etc.)
 
 init(autoreset=True)  # Initialize colorama for automatic style resets
 
+last_activity_time = time.time()  # Initialize with the current time
+
+IDLE_TIMEOUT = 3 * 60  # 3 minutes in seconds
 
 def handle_client(client_socket):
     """Handles communication with a single client."""
+    global last_activity_time  # Use the global activity tracker
 
     # Create a Client object and add it to the clients list
     client = Client(client_socket)
@@ -24,6 +29,8 @@ def handle_client(client_socket):
                 break
 
             message = json.loads(data)  # Deserialize the JSON message
+
+            last_activity_time = time.time()
 
             # Handle different message types
             if message["type"] == "join":
@@ -76,6 +83,26 @@ def remove_client(client_socket):
             break
     client_socket.close()
 
+def idle_timeout_checker():
+    """Checks for idle timeout and shuts down the server if unused."""
+    global last_activity_time
+
+    while True:
+        time_since_last_activity = time.time() - last_activity_time
+        if time_since_last_activity > IDLE_TIMEOUT:
+            print(Fore.RED + "Server has been idle for over 3 minutes. Shutting down..." + Style.RESET_ALL)
+            shutdown_server()
+            break
+        time.sleep(10)  # Check every 10 seconds
+
+
+def shutdown_server():
+    """Shuts down the server gracefully."""
+    for client in clients:
+        client.socket.close()
+    print(Fore.RED + "Server shutting down..." + Style.RESET_ALL)
+    exit(0)
+
 
 if __name__ == "__main__":
 
@@ -102,14 +129,20 @@ if __name__ == "__main__":
 
     print(Fore.GREEN + f"Server is ready to receive" + Style.RESET_ALL)
 
+    idle_thread = threading.Thread(target=idle_timeout_checker, daemon=True)
+    idle_thread.start()
+
     while True:  # Main loop for accepting client connections
-        client_socket, addr = (
-            server_socket.accept()
-        )  # Accept a connection from a client
-        print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
-        client_socket.send(
-            json.dumps(help_msg).encode()
-        )  # Send the help message to the client
-        # Create a new thread to handle the client communication
-        client_handler = threading.Thread(target=handle_client, args=(client_socket,))
-        client_handler.start()  # Start the thread
+        try:
+            client_socket, addr = server_socket.accept()  # Accept a connection from a client
+            print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
+            client_socket.send(
+                json.dumps(help_msg).encode()
+            )  # Send the help message to the client
+            # Create a new thread to handle the client communication
+            client_handler = threading.Thread(target=handle_client, args=(client_socket,))
+            client_handler.start()  # Start the thread
+        except KeyboardInterrupt:
+            print(Fore.RED + "\nServer shutting down gracefully..." + Style.RESET_ALL)
+            shutdown_server()
+            break
