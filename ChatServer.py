@@ -1,8 +1,11 @@
+#!/usr/bin/env python3
+
 import json
 from socket import *
 import threading
 from SharedData import *  # Import shared data (clients, channels, etc.)
 from CommandHandlers import *  # Import command handlers
+import argparse
 
 def handle_client(client_socket):
     """Handles communication with a single client."""
@@ -62,18 +65,32 @@ def remove_client(client_socket):
     client_socket.close()
 
 
-# Server setup
-server_port = 12000  # Define the server port
-server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
-server_socket.bind(('', server_port))  # Bind the socket to the port
-server_socket.listen(5)  # Listen for incoming connections
+if __name__=="__main__":
 
-print(f"Server is ready to receive")
+    #setting up argument parsing
+    parser = argparse.ArgumentParser(
+                    prog='ChatServer',
+                    description='Basic chat server supporting multiple clients over the Internet')
+    parser.add_argument('-p', choices=range(12000, 12050,1), default=12000, help = 'port')
+    parser.add_argument('-d', choices=[0,1], default=0, help = 'debug_level')
+    args = parser.parse_args()
+    # parser.print_help()
 
-while True:  # Main loop for accepting client connections
-    client_socket, addr = server_socket.accept()  # Accept a connection from a client
-    print(f"Accepted connection from {addr}")
-    client_socket.send(json.dumps(help_msg).encode())  # Send the help message to the client
-    # Create a new thread to handle the client communication
-    client_handler = threading.Thread(target=handle_client, args=(client_socket,))  
-    client_handler.start()  # Start the thread
+    #storing values
+    server_port = args.p # Define the server port
+    debug_level = args.d
+
+    # Server setup
+    server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
+    server_socket.bind(('', server_port))  # Bind the socket to the port
+    server_socket.listen(5)  # Listen for incoming connections
+
+    print(f"Server is ready to receive")
+
+    while True:  # Main loop for accepting client connections
+        client_socket, addr = server_socket.accept()  # Accept a connection from a client
+        print(f"Accepted connection from {addr}")
+        client_socket.send(json.dumps(help_msg).encode())  # Send the help message to the client
+        # Create a new thread to handle the client communication
+        client_handler = threading.Thread(target=handle_client, args=(client_socket,))  
+        client_handler.start()  # Start the thread
