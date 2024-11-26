@@ -1,6 +1,7 @@
 import json
 import threading
 from SharedData import *  # Import shared data (clients, channels, etc.)
+lock = threading.Lock()
 
 
 def send_server_message(client, message):
@@ -12,11 +13,12 @@ def send_server_message(client, message):
 
 
 def handle_join(client, message, channels):
-    lock = threading.Lock()
+    
     """Handles the /join command."""
     channel_name = message["channel_name"]  # Get the channel name from the message
     # Check if the channel already exists
     with lock:
+        
         if client.channel:
             handle_leave(client, message)
         channel = next((c for c in channels if c.name == channel_name), None)
