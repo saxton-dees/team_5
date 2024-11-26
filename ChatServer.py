@@ -2,6 +2,8 @@ import argparse
 import json
 import threading
 import time
+import signal  # For handling Ctrl-C
+
 from socket import *
 from colorama import Fore, Style, init
 
@@ -99,12 +101,24 @@ def idle_timeout_checker():
 def shutdown_server():
     """Shuts down the server gracefully."""
     for client in clients:
-        client.socket.close()
+        try:
+            client.socket.close()
+        except Exception as e:
+            print(Fore.RED + f"Error closing client socket: {e}" + Style.RESET_ALL)
     print(Fore.RED + "Server shutting down..." + Style.RESET_ALL)
     exit(0)
 
 
+def signal_handler(sig, frame):
+    """Handles the Ctrl-C (KeyboardInterrupt) signal for graceful shutdown."""
+    print(Fore.RED + "\nCtrl-C detected. Shutting down server gracefully..." + Style.RESET_ALL)
+    shutdown_server()
+
+
 if __name__ == "__main__":
+
+    # Register the signal handler for Ctrl-C
+    signal.signal(signal.SIGINT, signal_handler)
 
     # setting up argument parsing
     parser = argparse.ArgumentParser(
@@ -127,6 +141,8 @@ if __name__ == "__main__":
     server_socket.bind(("", server_port))  # Bind the socket to the port
     server_socket.listen(5)  # Listen for incoming connections
 
+    server_socket.settimeout(1)
+
     print(Fore.GREEN + f"Server is ready to receive" + Style.RESET_ALL)
 
     idle_thread = threading.Thread(target=idle_timeout_checker, daemon=True)
@@ -143,6 +159,7 @@ if __name__ == "__main__":
             client_handler = threading.Thread(target=handle_client, args=(client_socket,))
             client_handler.start()  # Start the thread
         except KeyboardInterrupt:
-            print(Fore.RED + "\nServer shutting down gracefully..." + Style.RESET_ALL)
             shutdown_server()
             break
+        except timeout:  # Timeout error to allow for signal handling
+            continue
