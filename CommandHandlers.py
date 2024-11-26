@@ -15,6 +15,8 @@ def handle_join(client, message, channels):
     """Handles the /join command."""
     channel_name = message["channel_name"]  # Get the channel name from the message
     # Check if the channel already exists
+    if client.channel:
+        handle_leave(client, message)
     channel = next((c for c in channels if c.name == channel_name), None)
     if not channel:  # If the channel doesn't exist, create it
         channel = Channel(channel_name)

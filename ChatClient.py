@@ -1,7 +1,8 @@
 import json
-import threading
 import signal  # For handling Ctrl-C
+import threading
 from socket import *
+
 from colorama import Fore, Style, init
 
 init(autoreset=True)  # Initialize colorama for automatic style resets
@@ -23,7 +24,11 @@ def receive_messages():
             if message["type"] == "server_message":  # Server messages
                 print(Fore.GREEN + message["message"] + Style.RESET_ALL)
             elif message["type"] == "chat_message":  # Chat messages
-                print(Fore.CYAN + f"{message['sender']}: {message['message']}" + Style.RESET_ALL)
+                print(
+                    Fore.CYAN
+                    + f"{message['sender']}: {message['message']}"
+                    + Style.RESET_ALL
+                )
             elif message["type"] == "private_message":  # Private messages
                 if "sender" in message:
                     print(
@@ -58,7 +63,11 @@ def send_message(message_type, **kwargs):
 
 def signal_handler(sig, frame):
     """Handles the Ctrl-C (KeyboardInterrupt) signal for graceful shutdown."""
-    print(Fore.RED + "\nCtrl-C detected. Disconnecting from server gracefully..." + Style.RESET_ALL)
+    print(
+        Fore.RED
+        + "\nCtrl-C detected. Disconnecting from server gracefully..."
+        + Style.RESET_ALL
+    )
     send_message("quit")  # Notify the server that the client is disconnecting
     client_socket.close()  # Close the client socket
     exit(0)  # Exit the program

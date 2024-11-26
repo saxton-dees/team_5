@@ -1,10 +1,10 @@
 import argparse
 import json
+import signal  # For handling Ctrl-C
 import threading
 import time
-import signal  # For handling Ctrl-C
-
 from socket import *
+
 from colorama import Fore, Style, init
 
 from CommandHandlers import *  # Import command handlers
@@ -13,7 +13,11 @@ from SharedData import *  # Import shared data (clients, channels, etc.)
 init(autoreset=True)  # Initialize colorama for automatic style resets
 
 last_activity_time = time.time()  # Initialize with the current time
-print(Fore.GREEN + f"Activity detected. Resetting idle timer: {last_activity_time}" + Style.RESET_ALL)
+print(
+    Fore.GREEN
+    + f"Activity detected. Resetting idle timer: {last_activity_time}"
+    + Style.RESET_ALL
+)
 
 IDLE_TIMEOUT = 3 * 60  # 3 minutes in seconds
 
@@ -87,7 +91,9 @@ def remove_client(client_socket):
             break
     client_socket.close()
 
+
 stop_event = threading.Event()  # global event to signal threads to stop
+
 
 def idle_timeout_checker():
     """Checks for idle timeout and shuts down the server if unused."""
@@ -95,13 +101,20 @@ def idle_timeout_checker():
 
     while not stop_event.is_set():  # Check if stop event is set
         time_since_last_activity = time.time() - last_activity_time
-        print(Fore.YELLOW + f"Checking idle timeout. Time since last activity: {time_since_last_activity}s" + Style.RESET_ALL)
+        print(
+            Fore.YELLOW
+            + f"Checking idle timeout. Time since last activity: {time_since_last_activity}s"
+            + Style.RESET_ALL
+        )
         if time_since_last_activity > IDLE_TIMEOUT:
-            print(Fore.RED + "Server has been idle for over 3 minutes. Shutting down..." + Style.RESET_ALL)
+            print(
+                Fore.RED
+                + "Server has been idle for over 3 minutes. Shutting down..."
+                + Style.RESET_ALL
+            )
             shutdown_server()
             break
         time.sleep(10)  # Check every 10 seconds
-
 
 
 def shutdown_server():
@@ -127,7 +140,11 @@ def shutdown_server():
 
 def signal_handler(sig, frame):
     """Handles the Ctrl-C (KeyboardInterrupt) signal for graceful shutdown."""
-    print(Fore.RED + "\nCtrl-C detected. Shutting down server gracefully..." + Style.RESET_ALL)
+    print(
+        Fore.RED
+        + "\nCtrl-C detected. Shutting down server gracefully..."
+        + Style.RESET_ALL
+    )
     shutdown_server()
 
 
@@ -144,9 +161,15 @@ if __name__ == "__main__":
         description="Basic chat server supporting multiple clients over the Internet",
     )
     parser.add_argument(
-        "-p", type=int, choices=range(12000, 12050), default=12000, help="port number (between 12000 and 12049)"
+        "-p",
+        type=int,
+        choices=range(12000, 12050),
+        default=12000,
+        help="port number (between 12000 and 12049)",
     )
-    parser.add_argument("-d", type=int, choices=[0, 1], default=0, help="debug level (0 or 1)")
+    parser.add_argument(
+        "-d", type=int, choices=[0, 1], default=0, help="debug level (0 or 1)"
+    )
     args = parser.parse_args()
     # parser.print_help()
 
@@ -172,7 +195,9 @@ if __name__ == "__main__":
                 client_socket, addr = server_socket.accept()
                 print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
                 client_socket.send(json.dumps(help_msg).encode())
-                client_handler = threading.Thread(target=handle_client, args=(client_socket,))
+                client_handler = threading.Thread(
+                    target=handle_client, args=(client_socket,)
+                )
                 client_handler.start()
             except timeout:
                 continue
