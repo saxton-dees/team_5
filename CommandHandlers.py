@@ -1,7 +1,7 @@
 import json
 import threading
 from SharedData import *  # Import shared data (clients, channels, etc.)
-lock = threading.Lock()
+
 
 
 def send_server_message(client, message):
@@ -17,19 +17,20 @@ def handle_join(client, message, channels):
     """Handles the /join command."""
     channel_name = message["channel_name"]  # Get the channel name from the message
     # Check if the channel already exists
-    with lock:
         
-        if client.channel:
-            handle_leave(client, message)
-        channel = next((c for c in channels if c.name == channel_name), None)
+    if client.channel:
+        handle_leave(client, message)
+        print("");
         
-        if not channel:  # If the channel doesn't exist, create it
-            channel = Channel(channel_name)
-            channels.append(channel)
-            send_server_message(client, f"Channel {channel_name} has been created.\n")
+    channel = next((c for c in channels if c.name == channel_name), None)
+        
+    if not channel:  # If the channel doesn't exist, create it
+        channel = Channel(channel_name)
+        channels.append(channel)
+        send_server_message(client, f"Channel {channel_name} has been created.\n")
 
-        channel.clients.append(client)  # Add the client to the channel's client list
-        client.channel = channel  # Set the client's current channel
+    channel.clients.append(client)  # Add the client to the channel's client list
+    client.channel = channel  # Set the client's current channel
 
     # Send messages to the client and the channel to confirm the join
     send_server_message(client, f"You have joined channel: {channel.name}")

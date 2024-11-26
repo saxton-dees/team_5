@@ -10,6 +10,8 @@ from colorama import Fore, Style, init
 from CommandHandlers import *  # Import command handlers
 from SharedData import *  # Import shared data (clients, channels, etc.)
 
+lock = threading.Lock()
+
 init(autoreset=True)  # Initialize colorama for automatic style resets
 
 last_activity_time = time.time()  # Initialize with the current time
@@ -28,7 +30,8 @@ def handle_client(client_socket):
 
     # Create a Client object and add it to the clients list
     client = Client(client_socket)
-    clients.append(client)
+    with lock: 
+        clients.append(client)
 
     while True:  # Main loop for handling client communication
         try:
@@ -40,45 +43,46 @@ def handle_client(client_socket):
 
             last_activity_time = time.time()
 
-            # Handle different message types
-            if message["type"] == "join":
-                handle_join(client, message, channels)
-            elif message["type"] == "leave":
-                handle_leave(client, message)
-            elif message["type"] == "nick":
-                handle_nick(client, message)
-            elif message["type"] == "list":
-                handle_list(client, message)
-            elif message["type"] == "msg":
-                handle_msg(client, message)
-            elif message["type"] == "quit":
-                handle_quit(client, message)
-                break  # Exit the loop if the client quits
-            elif message["type"] == "help":
-                handle_help(client, message)
-            else:  # If the message type is not recognized
-                if client.channel:  # If the client is in a channel
-                    # Construct a chat message and broadcast it to the channel
-                    response = {
-                        "type": "chat_message",
-                        "sender": client.nickname,
-                        "message": message["message"],
-                    }
-                    broadcast(client_socket, response, client.channel)
-                else:  # If the client is not in a channel
-                    # Send a server message informing the client to join a channel
-                    send_server_message(
-                        client,
-                        Fore.RED
-                        + "You are not in a channel. Use /join <channel_name> to join one."
-                        + Style.RESET_ALL,
-                    )
+            with lock:
+                # Handle different message types
+                if message["type"] == "join":
+                    handle_join(client, message, channels)
+                elif message["type"] == "leave":
+                    handle_leave(client, message)
+                elif message["type"] == "nick":
+                    handle_nick(client, message)
+                elif message["type"] == "list":
+                    handle_list(client, message)
+                elif message["type"] == "msg":
+                    handle_msg(client, message)
+                elif message["type"] == "quit":
+                    handle_quit(client, message)
+                    break  # Exit the loop if the client quits
+                elif message["type"] == "help":
+                    handle_help(client, message)
+                else:  # If the message type is not recognized
+                    if client.channel:  # If the client is in a channel
+                        # Construct a chat message and broadcast it to the channel
+                        response = {
+                            "type": "chat_message",
+                            "sender": client.nickname,
+                            "message": message["message"],
+                        }
+                        broadcast(client_socket, response, client.channel)
+                    else:  # If the client is not in a channel
+                        # Send a server message informing the client to join a channel
+                        send_server_message(
+                            client,
+                            Fore.RED
+                            + "You are not in a channel. Use /join <channel_name> to join one."
+                            + Style.RESET_ALL,
+                        )
 
         except Exception as e:  # Handle any exceptions during client communication
             print(Fore.RED + f"Error handling client: {e}" + Style.RESET_ALL)
             break
-
-    remove_client(client_socket)  # Remove the client when the connection is closed
+    with lock:
+        remove_client(client_socket)  # Remove the client when the connection is closed
 
 
 def remove_client(client_socket):
@@ -151,6 +155,7 @@ def signal_handler(sig, frame):
 running = True  # Add a flag to control the main loop
 
 if __name__ == "__main__":
+    
 
     # Register the signal handler for Ctrl-C
     signal.signal(signal.SIGINT, signal_handler)
