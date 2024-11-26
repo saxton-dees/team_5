@@ -80,9 +80,9 @@ if __name__ == "__main__":
         description="Basic chat server supporting multiple clients over the Internet",
     )
     parser.add_argument(
-        "-p", choices=range(12000, 12050, 1), default=12000, help="port"
+        "-p", type=int, choices=range(12000, 12050), default=12000, help="port number (between 12000 and 12049)"
     )
-    parser.add_argument("-d", choices=[0, 1], default=0, help="debug_level")
+    parser.add_argument("-d", type=int, choices=[0, 1], default=0, help="debug level (0 or 1)")
     args = parser.parse_args()
     # parser.print_help()
 
