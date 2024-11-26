@@ -15,40 +15,53 @@ client_socket.connect(("localhost", server_port))  # Connect to the server
 
 def receive_messages():
     """Receives messages from the server and prints them to the console."""
+    buffer = ""  # Initialize an empty buffer
+
     while True:
         try:
             response = client_socket.recv(2048).decode()  # Receive data from the server
-            message = json.loads(response)  # Deserialize the JSON message
+            buffer += response  # Add the received data to the buffer
 
-            # Handle different message types
-            if message["type"] == "server_message":  # Server messages
-                print(Fore.GREEN + message["message"] + Style.RESET_ALL)
-            elif message["type"] == "chat_message":  # Chat messages
-                print(
-                    Fore.CYAN
-                    + f"{message['sender']}: {message['message']}"
-                    + Style.RESET_ALL
-                )
-            elif message["type"] == "private_message":  # Private messages
-                if "sender" in message:
-                    print(
-                        Fore.YELLOW
-                        + f"PRIVATE MESSAGE from {message['sender']}: {message['message']}"
-                        + Style.RESET_ALL
-                    )
-                else:
-                    print(
-                        Fore.YELLOW
-                        + f"PRIVATE MESSAGE to {message['receiver']}: {message['message']}"
-                        + Style.RESET_ALL
-                    )
-            elif message["type"] == "help":  # Help message
-                print(Fore.BLUE + message["message"] + Style.RESET_ALL)
-            elif message["type"] == "list":  # List channels
-                if message["message"]:
-                    print(Fore.MAGENTA + message["message"] + Style.RESET_ALL)
-                else:
-                    print(Fore.RED + "No channels available." + Style.RESET_ALL)
+            while buffer:  # Keep processing while there's data in the buffer
+                try:
+                    message, index = json.JSONDecoder().raw_decode(buffer)
+                    buffer = buffer[
+                        index:
+                    ]  # Remove the processed message from the buffer
+
+                    # Handle different message types
+                    if message["type"] == "server_message":  # Server messages
+                        print(Fore.GREEN + message["message"] + Style.RESET_ALL)
+                    elif message["type"] == "chat_message":  # Chat messages
+                        print(
+                            Fore.CYAN
+                            + f"{message['sender']}: {message['message']}"
+                            + Style.RESET_ALL
+                        )
+                    elif message["type"] == "private_message":  # Private messages
+                        if "sender" in message:
+                            print(
+                                Fore.YELLOW
+                                + f"PRIVATE MESSAGE from {message['sender']}: {message['message']}"
+                                + Style.RESET_ALL
+                            )
+                        else:
+                            print(
+                                Fore.YELLOW
+                                + f"PRIVATE MESSAGE to {message['receiver']}: {message['message']}"
+                                + Style.RESET_ALL
+                            )
+                    elif message["type"] == "help":  # Help message
+                        print(Fore.BLUE + message["message"] + Style.RESET_ALL)
+                    elif message["type"] == "list":  # List channels
+                        if message["message"]:
+                            print(Fore.MAGENTA + message["message"] + Style.RESET_ALL)
+                        else:
+                            print(Fore.RED + "No channels available." + Style.RESET_ALL)
+
+                except json.JSONDecodeError:
+                    # Incomplete message, break the inner loop and wait for more data
+                    break
 
         except:  # Handle any exceptions during message receiving
             break

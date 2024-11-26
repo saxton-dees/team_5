@@ -30,7 +30,7 @@ def handle_client(client_socket):
 
     # Create a Client object and add it to the clients list
     client = Client(client_socket)
-    with lock: 
+    with lock:
         clients.append(client)
 
     while True:  # Main loop for handling client communication
@@ -155,7 +155,6 @@ def signal_handler(sig, frame):
 running = True  # Add a flag to control the main loop
 
 if __name__ == "__main__":
-    
 
     # Register the signal handler for Ctrl-C
     signal.signal(signal.SIGINT, signal_handler)
