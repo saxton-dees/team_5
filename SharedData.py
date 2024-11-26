@@ -1,16 +1,23 @@
 import json  # Import the json module for encoding and decoding JSON data
 
+
 class Client:
     """Represents a client connected to the chat server."""
+
     def __init__(self, socket):
         """Initializes a new Client object."""
         self.socket = socket  # The client's socket object
-        self.channel = None   # The channel the client is currently in (None if not in any channel)
-        self.nickname = self.socket.getpeername()  # The client's nickname (initially set to their address)
+        self.channel = (
+            None  # The channel the client is currently in (None if not in any channel)
+        )
+        self.nickname = (
+            self.socket.getpeername()
+        )  # The client's nickname (initially set to their address)
 
 
 class Channel:
     """Represents a chat channel."""
+
     def __init__(self, name):
         """Initializes a new Channel object."""
         self.name = name  # The name of the channel
@@ -23,7 +30,7 @@ def broadcast(client_socket, message, channel):
         if client.socket != client_socket:  # If the client is not the sender
             try:
                 # Encode the message as JSON and send it to the client
-                client.socket.send(json.dumps(message).encode())  
+                client.socket.send(json.dumps(message).encode())
             except Exception as e:  # Handle any exceptions during sending
                 print(f"Error broadcasting message: {e}")
 
@@ -35,8 +42,8 @@ clients = []  # The list of clients
 
 # Help message to be sent to clients
 help_msg = {
-    'type': 'help',  # Message type is 'help'
-    'message': f"""  # The actual help message content
+    "type": "help",  # Message type is 'help'
+    "message": f"""  # The actual help message content
 {"=" * 80}
 {"/" * 80}
 {"=" * 80}
@@ -52,5 +59,5 @@ help_msg = {
 {"=" * 80}
 {"/" * 80}
 {"=" * 80}
-"""
+""",
 }

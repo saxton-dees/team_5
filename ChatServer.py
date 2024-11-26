@@ -1,18 +1,17 @@
-#!/usr/bin/env python3
-
-import json
-from socket import *
-import threading
-from SharedData import *  # Import shared data (clients, channels, etc.)
-from CommandHandlers import *  # Import command handlers
 import argparse
-import socket
+import json
+import threading
+from socket import *
+
+from CommandHandlers import *  # Import command handlers
+from SharedData import *  # Import shared data (clients, channels, etc.)
+
 
 def handle_client(client_socket):
     """Handles communication with a single client."""
 
     # Create a Client object and add it to the clients list
-    client = Client(client_socket)  
+    client = Client(client_socket)
     clients.append(client)
 
     while True:  # Main loop for handling client communication
@@ -24,29 +23,36 @@ def handle_client(client_socket):
             message = json.loads(data)  # Deserialize the JSON message
 
             # Handle different message types
-            if message['type'] == 'join':  
+            if message["type"] == "join":
                 handle_join(client, message, channels)
-            elif message['type'] == 'leave':
+            elif message["type"] == "leave":
                 handle_leave(client, message)
-            elif message['type'] == 'nick':
+            elif message["type"] == "nick":
                 handle_nick(client, message)
-            elif message['type'] == 'list':
+            elif message["type"] == "list":
                 handle_list(client, message)
-            elif message['type'] == 'msg':
+            elif message["type"] == "msg":
                 handle_msg(client, message)
-            elif message['type'] == 'quit':
+            elif message["type"] == "quit":
                 handle_quit(client, message)
                 break  # Exit the loop if the client quits
-            elif message['type'] == 'help':
+            elif message["type"] == "help":
                 handle_help(client, message)
             else:  # If the message type is not recognized
                 if client.channel:  # If the client is in a channel
                     # Construct a chat message and broadcast it to the channel
-                    response = {'type': 'chat_message', 'sender': client.nickname, 'message': message['message']}  
+                    response = {
+                        "type": "chat_message",
+                        "sender": client.nickname,
+                        "message": message["message"],
+                    }
                     broadcast(client_socket, response, client.channel)
                 else:  # If the client is not in a channel
                     # Send a server message informing the client to join a channel
-                    send_server_message(client, "You are not in a channel. Use /join <channel_name> to join one.") 
+                    send_server_message(
+                        client,
+                        "You are not in a channel. Use /join <channel_name> to join one.",
+                    )
 
         except Exception as e:  # Handle any exceptions during client communication
             print(f"Error handling client: {e}")
@@ -66,43 +72,39 @@ def remove_client(client_socket):
     client_socket.close()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
 
-    #setting up argument parsing
+    # setting up argument parsing
     parser = argparse.ArgumentParser(
-                    prog='ChatServer',
-                    description='Basic chat server supporting multiple clients over the Internet')
-    parser.add_argument('-p', choices=range(12000, 12050,1), default=12000, help = 'port')
-    parser.add_argument('-d', choices=[0,1], default=0, help = 'debug_level')
+        prog="ChatServer",
+        description="Basic chat server supporting multiple clients over the Internet",
+    )
+    parser.add_argument(
+        "-p", choices=range(12000, 12050, 1), default=12000, help="port"
+    )
+    parser.add_argument("-d", choices=[0, 1], default=0, help="debug_level")
     args = parser.parse_args()
     # parser.print_help()
 
-    #storing values
+    # storing values
+    server_port = args.p  # Define the server port
     debug_level = args.d
-    server_port = args.p # Define the server port
-    
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    socket.timeout(2)
-    result = socket.connect_ex(('127.0.0.1',server_port))
-    if result == 0:
-        print("Port is open")
-    else:
-        print("Port is not open, using default 12000")
-        server_port = 12000
-    
-    
 
     # Server setup
-    # server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
-    server_socket.bind(('', server_port))  # Bind the socket to the port
+    server_socket = socket(AF_INET, SOCK_STREAM)  # Create a TCP socket
+    server_socket.bind(("", server_port))  # Bind the socket to the port
     server_socket.listen(5)  # Listen for incoming connections
 
     print(f"Server is ready to receive")
 
     while True:  # Main loop for accepting client connections
-        client_socket, addr = server_socket.accept()  # Accept a connection from a client
+        client_socket, addr = (
+            server_socket.accept()
+        )  # Accept a connection from a client
         print(f"Accepted connection from {addr}")
-        client_socket.send(json.dumps(help_msg).encode())  # Send the help message to the client
+        client_socket.send(
+            json.dumps(help_msg).encode()
+        )  # Send the help message to the client
         # Create a new thread to handle the client communication
-        client_handler = threading.Thread(target=handle_client, args=(client_socket,))  
+        client_handler = threading.Thread(target=handle_client, args=(client_socket,))
         client_handler.start()  # Start the thread
