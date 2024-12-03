@@ -37,28 +37,45 @@ def handle_client(client_socket):
         try:
             data = client_socket.recv(2048).decode()  # Receive data from the client
             if not data:  # If no data is received, client has disconnected
+                if debug_level == 1:
+                        print(Fore.YELLOW + f"Client has disconnected" + Style.RESET_ALL)
                 break
 
             message = json.loads(data)  # Deserialize the JSON message
 
             last_activity_time = time.time()
 
+
             with lock:
                 # Handle different message types
                 if message["type"] == "join":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Joining a channel" + Style.RESET_ALL)
                     handle_join(client, message, channels)
                 elif message["type"] == "leave":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Leaveing a channel" + Style.RESET_ALL)
                     handle_leave(client, message)
                 elif message["type"] == "nick":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Changing nickname" + Style.RESET_ALL)
                     handle_nick(client, message)
                 elif message["type"] == "list":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Listing channels" + Style.RESET_ALL)
                     handle_list(client, message)
                 elif message["type"] == "msg":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Sending message" + Style.RESET_ALL)
                     handle_msg(client, message)
                 elif message["type"] == "quit":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Leaving Server" + Style.RESET_ALL)
                     handle_quit(client, message)
                     break  # Exit the loop if the client quits
                 elif message["type"] == "help":
+                    if debug_level == 1:
+                        print(Fore.BLUE + "Printing help message" + Style.RESET_ALL)
                     handle_help(client, message)
                 else:  # If the message type is not recognized
                     if client.channel:  # If the client is in a channel
@@ -80,6 +97,8 @@ def handle_client(client_socket):
 
         except Exception as e:  # Handle any exceptions during client communication
             print(Fore.RED + f"Error handling client: {e}" + Style.RESET_ALL)
+            if debug_level == 1:
+                print(Fore.BLUE + "Error: Please try joining the server again!" + Style.RESET_ALL)
             break
     with lock:
         remove_client(client_socket)  # Remove the client when the connection is closed
@@ -90,9 +109,18 @@ def remove_client(client_socket):
     for client in clients:
         if client.socket == client_socket:
             if client.channel:
-                client.channel.clients.remove(client)
+                try:
+                    client.channel.clients.remove(client)
+                    if debug_level == 1:
+                        print(Fore.YELLOW + f"Removing client: {client.nickname}" + Style.RESET_ALL)
+                except ValueError:
+
+                    if debug_level == 1:
+                        print(Fore.YELLOW + f"Could not remove client, not in channel: {client.nickname}" + Style.RESET_ALL)
+            
             clients.remove(client)
             break
+        
     client_socket.close()
 
 
