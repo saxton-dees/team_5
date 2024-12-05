@@ -24,7 +24,7 @@ print(
 IDLE_TIMEOUT = 3 * 60  # 3 minutes in seconds
 
 
-def handle_client(client_socket):
+def handle_client(client_socket, debug_level):
     """Handles communication with a single client."""
     global last_activity_time  # Use the global activity tracker
 
@@ -101,10 +101,10 @@ def handle_client(client_socket):
                 print(Fore.BLUE + "Error: Please try joining the server again!" + Style.RESET_ALL)
             break
     with lock:
-        remove_client(client_socket)  # Remove the client when the connection is closed
+        remove_client(client_socket, debug_level)  # Remove the client when the connection is closed
 
 
-def remove_client(client_socket):
+def remove_client(client_socket, debug_level):
     """Removes a client from the clients list and any channel they were in."""
     for client in clients:
         if client.socket == client_socket:
@@ -228,7 +228,7 @@ if __name__ == "__main__":
                 print(Fore.CYAN + f"Accepted connection from {addr}" + Style.RESET_ALL)
                 client_socket.send(json.dumps(help_msg).encode())
                 client_handler = threading.Thread(
-                    target=handle_client, args=(client_socket,)
+                    target=handle_client, args=(client_socket,debug_level)
                 )
                 client_handler.start()
             except timeout:
